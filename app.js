@@ -45,6 +45,7 @@ var mysettings = roon.load_config("settings") || {
     zone:           yamaha.default_zone,
     zoneName:       "",
     device_name:    yamaha.default_device_name,
+    scene_num:      "",
     zone_list:      [],
     zone_input_list:[]
 }
@@ -82,7 +83,9 @@ function makelayout(settings) {
     } else {
         key = Number(settings.zone.match(/\d/)[0]) - 1; // zone number
     }
-    settings.zoneName = (settings.zone_list.find(z1 => z1.value === settings.zone)).title;
+
+    let zone = settings.zone_list.find(z1 => z1.value === settings.zone);
+    settings.zoneName = zone.title;
 
     let i = {
         type:       "dropdown",
@@ -99,6 +102,20 @@ function makelayout(settings) {
 
     l.layout.push(z);
     l.layout.push(i);
+
+    if(settings.zone_scene_list && settings.zone_scene_list[key]) {
+        l.layout.push({
+            type:    "dropdown",
+            title:   "Startup Scene",
+            subtitle: "Selected scene will be set on startup (optional)",
+            values:   settings.zone_scene_list[key]["scene_list"],
+            setting: "scene_num"
+        });
+
+        if (!settings.scene_num) {
+            settings.scene_num = settings.zone_scene_list[key]["scene_list"][0].value;
+        }
+    }
 
     return l;
 }
@@ -171,21 +188,22 @@ async function get_yamaha_props() {
         await yamaha.av.getFeatures().then(function(result) {
             mysettings.zone_list = [];
             mysettings.zone_input_list = [];
-            mysettings.input_list = [];
+            mysettings.zone_scene_list = [];
     
             let zones = result.zone;
             for (let key1 in zones) {
                 // get zones
                 // console.log(key1 + "----", zones[key1].id);
-                if (zones[key1].id) {
-                    let zoneName = (zones[key1].id == "main") ? "main zone" : zones[key1].id;
+                let zone = zones[key1];
+                if (zone.id) {
+                    let zoneName = (zone.id == "main") ? "main zone" : zone.id;
                     zoneName = zoneName.charAt(0).toUpperCase() + zoneName.slice(1) +": " + zoneNames[key1].text;
                     mysettings.zone_list.push({
                         "title": zoneName, 
                         "value": zones[key1].id
                     })
                     // get inputs for each zone
-                    let inputs = result.zone[key1].input_list;
+                    let inputs = zone.input_list;
                     // console.table(inputs);
                     let input_list = [];
                     for (let key in inputs) {
@@ -200,9 +218,27 @@ async function get_yamaha_props() {
                     // console.table(input_list);
                     // add to zone_input_list
                     mysettings.zone_input_list.push({
-                        "zone": zones[key1].id,
+                        "zone": zone.id,
                         "input_list": input_list
                     })
+                    
+                    if(zone.scene_num) {
+                        let scene_list = [];
+                        scene_list.push({
+                            title: "Not Set",
+                            value: ""
+                        });
+                        for (let i = 1; i <= zone.scene_num; i++) {
+                            scene_list.push({
+                                title: "Scene " + i,
+                                value: i
+                            });
+                        }
+                        mysettings.zone_scene_list.push({
+                            "zone": zone.id,
+                            "scene_list": scene_list
+                        });
+                    }
                 }
             }
         }) 
@@ -319,7 +355,13 @@ async function setup_yamaha() {
             status: "selected",
         },
         convenience_switch: function (req) {
-            yamaha.av.power("on", mysettings.zone);
+            if(mysettings.scene_num && mysettings.scene_num != "") {
+                yamaha.av.setScene(mysettings.scene_num, mysettings.zone);
+            }
+            else {
+                yamaha.av.power("on", mysettings.zone);
+            }
+
             yamaha.av.setInput(mysettings.input, mysettings.zone);
             req.send_complete("Success");
         },

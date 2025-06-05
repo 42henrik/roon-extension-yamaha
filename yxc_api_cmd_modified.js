@@ -295,6 +295,17 @@ class YamahaYXC {
 			return Promise.reject(error);
 		}
 	}
+
+	async setScene(num, zone) {
+		try {
+			const command = '/' + this.getZone(zone) + '/recallScene?num=' + num;
+			const result = await this.SendGetToDevice(command);
+			return Promise.resolve(result);
+		} catch (error) {
+			return Promise.reject(error);
+		}
+	}
+
 	async setSound(input, zone) {
 		//check for correct input in calling program
 		try {
