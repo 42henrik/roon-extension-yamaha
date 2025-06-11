@@ -93,7 +93,7 @@ function makelayout(settings) {
     };
 
     if (!settings.zone_input_list[key]["input_list"].find(i1 => i1.value === settings.input)) {
-        settings.input = yamaha.default_input;
+        settings.input = settings.zone_input_list[key]["input_list"][0].value;
     }
     settings.inputName = (settings.zone_input_list[key]["input_list"].find(i1 => i1.value === settings.input)).title;
 
@@ -190,7 +190,7 @@ async function get_yamaha_props() {
                     let input_list = [];
                     for (let key in inputs) {
                         // console.log(key + ": " + inputs[key]); //(inputs[key].substr(0, 2) = 'av') || (inputs[key].substr(0, 5) = 'audio' ) || 
-                        if (inputs[key].includes('av') || inputs[key].includes('audio') || inputs[key].includes('airplay')  ) {
+                        if (inputs[key].includes('av') || inputs[key].includes('audio') || inputs[key].includes('airplay') || inputs[key].includes('hdmi')) {
                                 input_list.push({
                                     "title": inputNames.find(inputName => inputName.id === inputs[key]).text,
                                     "value": inputs[key],
